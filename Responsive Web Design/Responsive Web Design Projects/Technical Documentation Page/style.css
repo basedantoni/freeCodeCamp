@@ -1,0 +1,14 @@
+body {
+    display: flex;
+    background-color: aqua;
+}
+
+#nav-bar {
+    display: flex;
+    flex-direction: column;
+}
+
+#main-doc {
+    display: flex;
+    flex-direction: column;
+}
