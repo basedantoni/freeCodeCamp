@@ -1,0 +1,8 @@
+# Ignore Node Modules
+Responsive Web Design\Responsive Web Design Projects\Technical Documentation Page\node_modules
+
+# Ignore All JSON files
+*.json
+
+# Ignore Server files
+Responsive Web Design\Responsive Web Design Projects\Technical Documentation Page\server.js
