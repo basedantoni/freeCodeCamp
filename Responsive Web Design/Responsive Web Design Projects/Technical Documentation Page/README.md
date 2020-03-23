@@ -1,5 +1,4 @@
 # Technical Documentation
----
 
 Here is the 3rd freeCodeCamp Responsive Web Design Project
 
