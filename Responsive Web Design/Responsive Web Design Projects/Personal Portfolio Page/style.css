@@ -1,0 +1,43 @@
+* {
+    font-family: 'Open Sans', sans-serif;
+    margin: 0;
+}
+
+#navbar {
+    display: flex;
+    top: 0;
+    left: 0;
+    flex-direction: column;
+    position: fixed;
+    width: 100%;
+    height: 4em;
+    background-color: crimson;
+}
+
+#nav-link {
+    display: flex;
+    list-style-type: none;
+    margin-left: 75%;
+}
+
+li {
+    padding-top: 18px;
+    margin-right: 20px;
+    font-size: 24px;
+}
+
+li:hover {
+    color: white;
+}
+
+#welcome-section {
+    display: flex;
+    top: 100px;
+    align-items: center;
+    flex-direction: column;
+}
+
+#projects {
+    height: 100vh;
+    background-color: aqua;
+}
