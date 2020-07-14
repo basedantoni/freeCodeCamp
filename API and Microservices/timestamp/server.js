@@ -29,6 +29,7 @@ app.get("/api/timestamp/:date_string?", function (req, res) {
         unix: Number,
         utc: String
     }
+    let empty = false;
 
     // Check if date is empty
     if(!dateString) {
@@ -37,15 +38,16 @@ app.get("/api/timestamp/:date_string?", function (req, res) {
         let utcDate = new Date(newDate);
         dateObj.unix = newDate;
         dateObj.utc = new Date(newDate).toUTCString();
+        empty = true;
     }
 
     // Check if date cannot be parsed
-    if(!Date.parse(dateString)) {
+    if(!Date.parse(dateString) && !empty) {
         dateObj = { error: 'Invalid Date' };
     }
 
     // Check if date is in unix or ISO format 
-    if(dateString.indexOf('-') > 0 && parseInt(dateString)) {
+    if(parseInt(dateString) && dateString.indexOf('-') > 0) {
         console.log('Date is in ISO format');
         dateObj.unix = date;
         dateObj.utc = utcDate;
