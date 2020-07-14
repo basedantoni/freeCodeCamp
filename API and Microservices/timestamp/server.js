@@ -22,30 +22,43 @@ app.get("/", function (req, res) {
 // your first API endpoint... 
 app.get("/api/timestamp/:date_string?", function (req, res) {
 
-    let date = req.params.date_string;
+    let dateString = req.params.date_string;
+    let date = new Date(dateString).setUTCHours(0); 
+    let utcDate = new Date(date).toUTCString();
+    let dateObj = {
+        unix: Number,
+        utc: String
+    }
 
-    console.log('Date Parsed: ', Date.parse(date));
     // Check if date is empty
-    if(date === '') {
+    if(!dateString) {
         console.log('Date is empty');
         let newDate = Date.now();
         let utcDate = new Date(newDate);
-        res.json({unix: newDate, utc: utcDate.toUTCString()});
+        dateObj.unix = newDate;
+        dateObj.utc = new Date(newDate).toUTCString();
     }
 
-    // Check if date can be parsed
-    else if(Date.parse(date) !== Number && !date.indexOf('-')) {
-        console.log('Date can\'t be parsed');
-        res.json({error: 'Invalid Date'})
+    // Check if date cannot be parsed
+    if(!Date.parse(dateString)) {
+        dateObj = { error: 'Invalid Date' };
+    }
+
+    // Check if date is in unix or ISO format 
+    if(dateString.indexOf('-') > 0 && parseInt(dateString)) {
+        console.log('Date is in ISO format');
+        dateObj.unix = date;
+        dateObj.utc = utcDate;
+        delete dateObj.error;
     } 
-    else if(Date.parse(date) >= 0 || parseInt(date)){
-        console.log('Normal Date');
-        res.json({unix: date, utc: new Date(date).toUTCString()})
+    else if(parseInt(dateString) || parseInt(dateString) === 0) {
+        console.log('Else Statement')
+        dateObj.unix = parseInt(dateString);
+        dateObj.utc = new Date(parseInt(dateString)).toUTCString();
+        delete dateObj.error;
     }
-    else if(Date.parse(date) < 0) {
-        console.log('Parsed Int', parseInt(date))
-        res.json({unix: date, utc: new Date(parseInt(date)).toUTCString()})
-    }
+
+    res.json(dateObj);
 })
 
 // listen for requests :)
