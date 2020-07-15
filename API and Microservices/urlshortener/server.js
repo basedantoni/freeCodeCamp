@@ -5,7 +5,10 @@ const mongo = require('mongodb');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const dns = require('dns');
+require('dotenv').config();
 let Schema = mongoose.Schema;
+
+mongoose.connect(process.env.MONGOURI, {useNewUrlParser: true, useUnifiedTopology: true });
 
 var cors = require('cors');
 
@@ -30,10 +33,36 @@ app.get('/', function(req, res){
 });
   
 // ShortURL Schema
-let ShortURL = new Schema({
+let shortURLSchema = new Schema({
     original: String,
     shortend: Number
 })
+
+let ShortURL = mongoose.model('ShortURL', shortURLSchema);
+
+const getShortUrl = url => {
+    let shortUrl = 0;
+    ShortURL.find({original: url}, (err, urlDoc) => {
+        // need to set shortUrl to current shortUrl
+        console.log('URL DOC: ', typeof urlDoc);
+        if(Object.entries(urlDoc).length !== 0) {
+            console.log('Found!');
+            return shortUrl + 1;
+        } else {
+            console.log('NOT Found!');
+            let newUrl = new ShortURL({
+                original: url,
+                shortend: shortUrl
+            });
+            newUrl.save((err, data) => {
+                err ? console.log(err) : console.log('Created: ', data)
+            });
+        }    
+        return err ? console.log(err) : url;
+    }).limit(1);
+    console.log(shortUrl);
+    return 0;
+}
 
 // your first API endpoint... 
 app.post('/api/shorturl/new', (req, res) => {
@@ -44,27 +73,24 @@ app.post('/api/shorturl/new', (req, res) => {
     if(url.includes('https://') || url.includes('http://')) {
         const invalidHostname = {error: 'Invalid Hostname'};
         const hostName = url.slice(url.indexOf('/') + 2);
-
         let urlObj = {
             original_url: String,
             short_url: Number
         }
+        let ipRegex = /^[23]./
 
-        console.log('Host: ', hostName);
-        let ipRegex = /^[23]/
         dns.lookup(hostName, (err, address, family) => {
-            console.log('Address: ', address);
 
+            // Check if the ip starts with 23
             if(ipRegex.test(address)) {
-                console.log('hello');
+                console.log(address);
                 res.json(invalidHostname);
             } else {
+                getShortUrl(url);
                 urlObj.original_url = url;
                 urlObj.short_url = 1;
                 res.json(urlObj);
             }
-
-            
             err ? console.log(err) : console.log('Look Up Success');
             family ? console.log('Family: ', family) : urlObj = invalidHostname; 
         })
