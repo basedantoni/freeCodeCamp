@@ -8,7 +8,10 @@ const dns = require('dns');
 require('dotenv').config();
 let Schema = mongoose.Schema;
 
-mongoose.connect(process.env.MONGOURI, {useNewUrlParser: true, useUnifiedTopology: true });
+mongoose
+    .connect(process.env.MONGOURI, {useNewUrlParser: true, useUnifiedTopology: true })
+    .then(() => console.log('Connected to Mongo'))
+    .catch(err => console.log(err))
 
 var cors = require('cors');
 
@@ -34,34 +37,33 @@ app.get('/', function(req, res){
   
 // ShortURL Schema
 let shortURLSchema = new Schema({
-    original: String,
-    shortend: Number
+    original_url: String,
+    short_url: Number
 })
 
-let ShortURL = mongoose.model('ShortURL', shortURLSchema);
+let sequenceSchema = new Schema({
+    _id: String,
+    sequence_val: Number 
+})
 
-const getShortUrl = url => {
-    let shortUrl = 0;
-    ShortURL.find({original: url}, (err, urlDoc) => {
-        // need to set shortUrl to current shortUrl
-        console.log('URL DOC: ', typeof urlDoc);
-        if(Object.entries(urlDoc).length !== 0) {
-            console.log('Found!');
-            return shortUrl + 1;
-        } else {
-            console.log('NOT Found!');
-            let newUrl = new ShortURL({
-                original: url,
-                shortend: shortUrl
-            });
-            newUrl.save((err, data) => {
-                err ? console.log(err) : console.log('Created: ', data)
-            });
-        }    
-        return err ? console.log(err) : url;
-    }).limit(1);
-    console.log(shortUrl);
-    return 0;
+// Create a ShortUrl Model
+let ShortURL = mongoose.model('ShortURL', shortURLSchema);
+let Sequence = mongoose.model('Sequence', sequenceSchema);
+
+// let newSequence = new Sequence({
+//     _id: 'urlId',
+//     sequence_val: 0
+// })
+
+//newSequence.save().then(seq => console.log(seq)).catch(err => console.log(err))
+
+// This will be used to check if it is a valid url
+const protcolRegex = /(https?:\/\/)/
+
+// Uses protocolRegex to parse out the hostname
+const getHostname = url => {
+    let splitUrl = url.split(protcolRegex);
+    return splitUrl[2];
 }
 
 // your first API endpoint... 
@@ -70,32 +72,75 @@ app.post('/api/shorturl/new', (req, res) => {
     const invalidUrl = {error: 'Invalid URL'};
 
     // Check if url is valid
-    if(url.includes('https://') || url.includes('http://')) {
+    if(protcolRegex.test(url)) {
         const invalidHostname = {error: 'Invalid Hostname'};
-        const hostName = url.slice(url.indexOf('/') + 2);
+        const hostName = getHostname(url);
         let urlObj = {
-            original_url: String,
-            short_url: Number
+            original_url: '',
+            short_url: 0
         }
+        let x = 0
         let ipRegex = /^[23]./
-
         dns.lookup(hostName, (err, address, family) => {
-
             // Check if the ip starts with 23
-            if(ipRegex.test(address)) {
-                console.log(address);
+            if(x /* ipRegex.test(address) */) {
                 res.json(invalidHostname);
             } else {
-                getShortUrl(url);
-                urlObj.original_url = url;
-                urlObj.short_url = 1;
-                res.json(urlObj);
+                ShortURL
+                    .find({original_url: url})
+                    .then(shortUrl => {
+                        let numOfMatches = Object.entries(shortUrl).length;
+                        if(!numOfMatches) {
+                            Sequence.findByIdAndUpdate({_id: 'urlId'}, {$inc: {sequence_val: 1}}, {useFindAndModify: false})
+                                .then(sequenceDoc => {
+                                    let newUrl = new ShortURL({
+                                        original_url: url,
+                                        short_url: sequenceDoc.sequence_val + 1
+                                    })
+                                    newUrl
+                                        .save()
+                                        .then(url => {
+                                            urlObj.original_url = url.original_url
+                                            urlObj.short_url = url.short_url
+                                            res.json(urlObj)
+                                        })
+                                        .catch(err => console.log(err))
+                                })
+                                .catch(err => console.log(err))
+                        } else {
+                            urlObj.original_url = shortUrl[0].original_url
+                            urlObj.short_url = shortUrl[0].short_url
+                            res.json(urlObj)
+                        }
+                    })
             }
             err ? console.log(err) : console.log('Look Up Success');
-            family ? console.log('Family: ', family) : urlObj = invalidHostname; 
         })
+    } else {
+        res.json(invalidUrl);
     }
 });
+
+app.get('/api/shorturl/:num', (req, res) => {
+    const shortUrl = parseInt(req.params.num);
+    console.log(shortUrl)
+    if(!shortUrl && shortUrl !== 0) {
+        res.json({error: 'Wrong format'})
+    } else {
+        ShortURL.find({short_url: shortUrl})
+            .then(shortUrl => {
+                let numOfMatches = Object.entries(shortUrl).length;
+                if(!numOfMatches) {
+                    res.json({error: 'No short URL found for the given input'})
+                } else {
+                    res.redirect(shortUrl[0].original_url)
+                }
+            })
+            .catch(err => {
+                console.log(err)
+            })
+    }
+})
 
 
 app.listen(port, function () {
