@@ -75,6 +75,7 @@ app.get('/api/exercise/users', (req, res) => {
 // @access Public
 app.post('/api/exercise/add', (req, res) => {
   let { userId, description, duration, date } = req.body;
+  let exerciseObj;
 
   // If date is empty
   if(!date) {
@@ -89,23 +90,29 @@ app.post('/api/exercise/add', (req, res) => {
         res.send('UserId doesn\'t exist')
       } else {
         req.body.date = dateString;
-        doc.exercises.push(req.body);
+        exerciseObj = {
+          description: description,
+          duration: duration,
+          date: dateString
+        }
+        doc.exercises.push(exerciseObj);
 
         doc
           .save()
           .then(doc => res.json({
             _id: doc._id,
             username: doc.username,
-            date: doc.date,
-            duration: doc.duration,
-            description: doc.description
+            date: dateString,
+            duration: duration,
+            description: description
           }))
           .catch(err => console.log(err))
       }
     })
   } else {
     console.log('YES DATE')
-    const utcDate = new Date(date);
+    let utcDate = new Date(date);
+    utcDate.setDate(utcDate.getDate())
     const dateString = utcDate.toDateString();
 
     User.findOne({_id: userId}, (err, doc) => {
@@ -113,7 +120,12 @@ app.post('/api/exercise/add', (req, res) => {
         console.log(err)
         res.send('UserId doesn\'t exist')
       } else {
-        doc.exercises.push(req.body);
+        exerciseObj = {
+          description: description,
+          duration: duration,
+          date: dateString
+        }
+        doc.exercises.push(exerciseObj);
         doc
           .save()
           .then(doc => res.json({
@@ -132,8 +144,111 @@ app.post('/api/exercise/add', (req, res) => {
 // @route GET api/exercise/log
 // @desc Get Exercise Log
 // @access Public
-app.get('/api/exercise/log', (req, res) => {
-  
+app.post('/api/exercise/log', (req, res) => {
+  const { userId, from, to, limit } = req.body
+
+  User
+    .findOne({_id: userId})
+    .exec((err, doc) => {
+      let exerciseTotal = doc.exercises.length;
+      let userObj = {};
+      userObj.total = exerciseTotal;
+      userObj._id = doc._id;
+      userObj.username = doc.username;
+      userObj.exercises = doc.exercises;
+
+      if(err) {
+        console.log(err)
+      }
+      else if(from && to && limit) {
+        let fromParsed = Date.parse(from);
+        let toParsed = Date.parse(to);
+
+        // array of exercise dates
+        let newExerciseArr = userObj.exercises.filter(exercise => {
+          return Date.parse(exercise.date) >= fromParsed && Date.parse(exercise.date) <= toParsed;
+        })
+        let limitedExercises = newExerciseArr.slice(0, limit);
+        userObj.exercises = limitedExercises;
+        userObj.total = limitedExercises.length;
+        res.json(userObj)
+      } 
+      else if(from && to) {
+        let fromParsed = Date.parse(from);
+        let toParsed = Date.parse(to);
+
+        // array of exercise dates
+        let newExerciseArr = userObj.exercises.filter(exercise => {
+          return Date.parse(exercise.date) >= fromParsed && Date.parse(exercise.date) <= toParsed;
+        })
+
+        userObj.exercises = newExerciseArr;
+        userObj.total = newExerciseArr.length;
+        res.json(userObj);
+      }
+      else if(from && limit) {
+        let fromParsed = Date.parse(from);
+
+        // array of exercise dates
+        let newExerciseArr = userObj.exercises
+          .sort((a, b) => (a.date < b.date) ? 1 : -1)
+          .filter(exercise => {
+            return Date.parse(exercise.date) >= fromParsed;
+        })
+        let limitedExercises = newExerciseArr.slice(0, limit);
+        userObj.exercises = limitedExercises;
+        userObj.total = limitedExercises.length;
+        res.json(userObj)
+      } 
+      else if(to && limit) {
+        let toParsed = Date.parse(to);
+
+        // array of exercise dates
+        let newExerciseArr = userObj.exercises
+          .sort((a, b) => (a.date < b.date) ? 1 : -1)
+          .filter(exercise => {
+            return Date.parse(exercise.date) <= toParsed;
+        })
+        let limitedExercises = newExerciseArr.slice(0, limit);
+        userObj.exercises = limitedExercises;
+        userObj.total = limitedExercises.length;
+        res.json(userObj)
+      } 
+      else if(from) {
+        let fromParsed = Date.parse(from);
+
+        // array of exercise dates
+        let newExerciseArr = userObj.exercises
+          .sort((a, b) => (a.date < b.date) ? 1 : -1)
+          .filter(exercise => {
+            return Date.parse(exercise.date) >= fromParsed;
+        })
+        userObj.exercises = newExerciseArr;
+        userObj.total = newExerciseArr.length;
+        res.json(userObj)
+      } 
+      else if(to) {
+        let toParsed = Date.parse(to);
+
+        // array of exercise dates
+        let newExerciseArr = userObj.exercises
+          .sort((a, b) => (a.date < b.date) ? 1 : -1)
+          .filter(exercise => {
+            return Date.parse(exercise.date) <= toParsed;
+        })
+        userObj.exercises = newExerciseArr;
+        userObj.total = newExerciseArr.length;
+        res.json(userObj)
+      } 
+      else if(limit) {
+        let limitedExercises = userObj.exercises.slice(0, limit);
+        userObj.exercises = limitedExercises;
+        userObj.total = limitedExercises.length;
+        res.json(userObj)
+      } else {
+        res.json(userObj);
+      }
+  })
 })
 
 
