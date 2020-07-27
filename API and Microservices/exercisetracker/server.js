@@ -2,7 +2,6 @@ require('dotenv').config();
 const express = require('express')
 const app = express()
 const bodyParser = require('body-parser')
-
 const cors = require('cors')
 
 const mongoose = require('mongoose');
@@ -79,7 +78,6 @@ app.post('/api/exercise/add', (req, res) => {
 
   // If date is empty
   if(!date) {
-    console.log('NO DATE')
     const newDate = Date.now();
     const utcDate = new Date(newDate);
     const dateString = utcDate.toDateString();
@@ -103,14 +101,13 @@ app.post('/api/exercise/add', (req, res) => {
             _id: doc._id,
             username: doc.username,
             date: dateString,
-            duration: duration,
+            duration: parseInt(duration),
             description: description
           }))
           .catch(err => console.log(err))
       }
     })
   } else {
-    console.log('YES DATE')
     let utcDate = new Date(date);
     utcDate.setDate(utcDate.getDate())
     const dateString = utcDate.toDateString();
@@ -132,7 +129,7 @@ app.post('/api/exercise/add', (req, res) => {
             _id: doc._id,
             username: doc.username,
             date: dateString,
-            duration: duration,
+            duration: parseInt(duration),
             description: description
           }))
           .catch(err => console.log(err))
@@ -144,18 +141,18 @@ app.post('/api/exercise/add', (req, res) => {
 // @route GET api/exercise/log
 // @desc Get Exercise Log
 // @access Public
-app.post('/api/exercise/log', (req, res) => {
-  const { userId, from, to, limit } = req.body
+app.get('/api/exercise/log', (req, res) => {
+  const { userId, from, to, limit } = req.query
 
   User
     .findOne({_id: userId})
     .exec((err, doc) => {
       let exerciseTotal = doc.exercises.length;
       let userObj = {};
-      userObj.total = exerciseTotal;
       userObj._id = doc._id;
       userObj.username = doc.username;
-      userObj.exercises = doc.exercises;
+      userObj.count = exerciseTotal;
+      userObj.log = doc.exercises;
 
       if(err) {
         console.log(err)
@@ -165,12 +162,12 @@ app.post('/api/exercise/log', (req, res) => {
         let toParsed = Date.parse(to);
 
         // array of exercise dates
-        let newExerciseArr = userObj.exercises.filter(exercise => {
+        let newExerciseArr = userObj.log.filter(exercise => {
           return Date.parse(exercise.date) >= fromParsed && Date.parse(exercise.date) <= toParsed;
         })
         let limitedExercises = newExerciseArr.slice(0, limit);
-        userObj.exercises = limitedExercises;
-        userObj.total = limitedExercises.length;
+        userObj.log = limitedExercises;
+        userObj.count = limitedExercises.length;
         res.json(userObj)
       } 
       else if(from && to) {
@@ -178,72 +175,72 @@ app.post('/api/exercise/log', (req, res) => {
         let toParsed = Date.parse(to);
 
         // array of exercise dates
-        let newExerciseArr = userObj.exercises.filter(exercise => {
+        let newExerciseArr = userObj.log.filter(exercise => {
           return Date.parse(exercise.date) >= fromParsed && Date.parse(exercise.date) <= toParsed;
         })
 
-        userObj.exercises = newExerciseArr;
-        userObj.total = newExerciseArr.length;
+        userObj.log = newExerciseArr;
+        userObj.count = newExerciseArr.length;
         res.json(userObj);
       }
       else if(from && limit) {
         let fromParsed = Date.parse(from);
 
         // array of exercise dates
-        let newExerciseArr = userObj.exercises
+        let newExerciseArr = userObj.log
           .sort((a, b) => (a.date < b.date) ? 1 : -1)
           .filter(exercise => {
             return Date.parse(exercise.date) >= fromParsed;
         })
         let limitedExercises = newExerciseArr.slice(0, limit);
-        userObj.exercises = limitedExercises;
-        userObj.total = limitedExercises.length;
+        userObj.log = limitedExercises;
+        userObj.count = limitedExercises.length;
         res.json(userObj)
       } 
       else if(to && limit) {
         let toParsed = Date.parse(to);
 
         // array of exercise dates
-        let newExerciseArr = userObj.exercises
+        let newExerciseArr = userObj.log
           .sort((a, b) => (a.date < b.date) ? 1 : -1)
           .filter(exercise => {
             return Date.parse(exercise.date) <= toParsed;
         })
         let limitedExercises = newExerciseArr.slice(0, limit);
-        userObj.exercises = limitedExercises;
-        userObj.total = limitedExercises.length;
+        userObj.log = limitedExercises;
+        userObj.count = limitedExercises.length;
         res.json(userObj)
       } 
       else if(from) {
         let fromParsed = Date.parse(from);
 
         // array of exercise dates
-        let newExerciseArr = userObj.exercises
+        let newExerciseArr = userObj.log
           .sort((a, b) => (a.date < b.date) ? 1 : -1)
           .filter(exercise => {
             return Date.parse(exercise.date) >= fromParsed;
         })
-        userObj.exercises = newExerciseArr;
-        userObj.total = newExerciseArr.length;
+        userObj.log = newExerciseArr;
+        userObj.count = newExerciseArr.length;
         res.json(userObj)
       } 
       else if(to) {
         let toParsed = Date.parse(to);
 
         // array of exercise dates
-        let newExerciseArr = userObj.exercises
+        let newExerciseArr = userObj.log
           .sort((a, b) => (a.date < b.date) ? 1 : -1)
           .filter(exercise => {
             return Date.parse(exercise.date) <= toParsed;
         })
-        userObj.exercises = newExerciseArr;
-        userObj.total = newExerciseArr.length;
+        userObj.log = newExerciseArr;
+        userObj.count = newExerciseArr.length;
         res.json(userObj)
       } 
       else if(limit) {
-        let limitedExercises = userObj.exercises.slice(0, limit);
-        userObj.exercises = limitedExercises;
-        userObj.total = limitedExercises.length;
+        let limitedExercises = userObj.log.slice(0, limit);
+        userObj.log = limitedExercises;
+        userObj.count = limitedExercises.length;
         res.json(userObj)
       } else {
         res.json(userObj);
